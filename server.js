@@ -10,12 +10,12 @@ const io = require('socket.io')(http);
 // path modülünü dosya yollarını yönetmek için dahil et
 const path = require('path');
 
-// Frontend dosyalarının bulunduğu public klasörünü statik olarak yayınla
-app.use(express.static(path.join(__dirname, 'public')));
+// YOL DÜZELTMESİ 1/2: Artık 'public' klasörü yerine direkt ana klasörü (kök dizini) statik olarak yayınla.
+app.use(express.static(path.join(__dirname))); 
 
-// Ana sayfa isteğine public/index.html dosyasını gönder
+// YOL DÜZELTMESİ 2/2: Ana sayfa isteğine direkt KÖK DİZİNDEN index.html dosyasını gönder.
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html')); 
 });
 
 // Socket.IO bağlantısı kurulduğunda
@@ -25,7 +25,6 @@ io.on('connection', (socket) => {
     // İstemciden gelen 'chat message' olayını dinle
     socket.on('chat message', (msg) => {
         // Gelen mesajı, o anda bağlı olan HERKESE geri gönder (io.emit)
-        // Bu, gerçek zamanlı iletişimin ana noktasıdır!
         io.emit('chat message', msg); 
         console.log('Gönderilen mesaj:', msg);
     });
@@ -37,7 +36,6 @@ io.on('connection', (socket) => {
 });
 
 // Sunucuyu başlat ve portu dinle
-// Render (veya diğer platformlar) PORT değişkenini otomatik sağlar.
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log(`Sunucu ${PORT} portunda çalışıyor.`);
