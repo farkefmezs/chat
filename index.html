@@ -1,121 +1,295 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>Ergün & Kanka Real-Time Sohbet</title>
+    <meta charset="UTF-8">
+    <title>Gelişmiş Gerçek Zamanlı Sohbet Odası</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Basit ve mobil uyumlu stil -->
+    <!-- Tailwind CSS CDN (Modern Stil Icin) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            margin: 0; 
-            padding-bottom: 5rem; /* Form için yer ayır */
-            font-family: Arial, sans-serif; 
-            background-color: #f0f4f8; 
-            color: #333; 
-        }
-        #form { 
-            background: #ffffff; 
-            padding: 0.5rem; 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            display: flex; 
-            box-shadow: 0 -3px 8px rgba(0,0,0,0.15); /* Gölgelendirme */
-        }
-        #input { 
-            border: 2px solid #ccc; 
-            padding: 0.75rem; 
-            flex-grow: 1; 
-            border-radius: 25px; 
-            margin-right: 0.5rem; 
-            transition: border-color 0.3s;
-        }
-        #input:focus { 
-            outline: none; 
-            border-color: #007bff; /* Mavi odak rengi */
-        }
-        #form > button { 
-            background: #007bff; 
-            border: none; 
-            padding: 0.75rem 1.5rem; 
-            border-radius: 25px; 
-            color: white; 
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-        }
-        #form > button:hover { 
-            background-color: #0056b3; 
-        }
-        #form > button:active {
-            transform: scale(0.98);
-        }
-        #messages { 
-            list-style-type: none; 
-            margin: 0; 
-            padding: 10px; 
-            display: flex;
-            flex-direction: column;
-        }
-        #messages > li { 
-            padding: 10px 15px; 
-            margin-bottom: 8px; 
-            border-radius: 18px; 
-            max-width: 80%;
-            word-wrap: break-word;
-            line-height: 1.4;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        /* Gelen Mesaj Stili */
-        #messages > li:nth-child(odd) { 
-            background: #e9ecef; /* Açık gri */
-            align-self: flex-start;
-            margin-right: auto;
-        }
-        /* Gönderilen Mesaj Stili */
-        #messages > li:nth-child(even) { 
-            background: #d1e7dd; /* Açık yeşil/mavi */
-            align-self: flex-end;
-            margin-left: auto;
+        /* Inter fontunu uygula */
+        body { font-family: 'Inter', sans-serif; }
+        /* Scrollbar'i gizle */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; /* IE and Edge */ scrollbar-width: none; /* Firefox */ }
+        /* Formu sabitle */
+        #chat-form-container {
+            height: 4rem; /* Mesaj giris alani yuksekligi */
         }
     </style>
 </head>
-<body>
-    <ul id="messages"></ul>
-    <form id="form">
-        <input id="input" autocomplete="off" placeholder="Mesajınızı buraya yazın..." />
-        <button type="submit">Gönder</button>
-    </form>
+<body class="bg-gray-100 h-screen overflow-hidden">
+
+    <!-- KULLANICI ADI GIRIS EKRANI (Modal) -->
+    <div id="username-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Sohbete Katıl</h2>
+            <p class="text-sm text-gray-600 mb-4">Lütfen bir kullanıcı adı seçin (Örn: Ergün, Kanka, vs.)</p>
+            <input type="text" id="username-input" placeholder="Kullanıcı Adı" maxlength="15" 
+                   class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            <button id="set-username-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-3 rounded-lg transition duration-150 shadow-md">
+                Sohbete Başla
+            </button>
+            <p id="username-error" class="text-sm text-red-500 mt-2 hidden"></p>
+        </div>
+    </div>
+
+    <!-- ANA SOHBET ARAYÜZÜ -->
+    <div id="main-chat-container" class="hidden h-full flex">
+        
+        <!-- Sol Panel: KULLANICI LISTESI -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+            <div class="p-4 bg-gray-50 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">Online Kullanıcılar</h3>
+                <p id="online-count" class="text-sm text-gray-500 mt-1">0 kişi online</p>
+            </div>
+            <ul id="user-list" class="flex-grow overflow-y-auto p-3 hide-scrollbar">
+                <!-- Kullanıcılar buraya eklenecek -->
+            </ul>
+        </div>
+        
+        <!-- Sağ Panel: MESAJLAR ve GIRIŞ ALANI -->
+        <div class="flex-grow flex flex-col h-full bg-gray-50">
+            
+            <!-- Mesaj Görüntüleme Alanı -->
+            <div id="messages-container" class="flex-grow overflow-y-auto p-4 space-y-4 hide-scrollbar">
+                <div class="text-center text-gray-400 text-sm py-2">Sohbete hoş geldiniz!</div>
+                <!-- Mesajlar buraya eklenecek -->
+            </div>
+            
+            <!-- Yazıyor... Bildirimi -->
+            <div id="typing-indicator" class="h-6 px-4 text-sm text-gray-500 transition-all duration-300 opacity-0">
+                <!-- 'yaziyor...' mesajları buraya gelecek -->
+            </div>
+
+            <!-- Mesaj Giriş Formu -->
+            <div id="chat-form-container" class="bg-white border-t border-gray-200 p-3 shadow-lg">
+                <form id="form" class="flex space-x-3">
+                    <input type="text" id="input" placeholder="Mesajınızı yazın..." autocomplete="off" 
+                           class="flex-grow p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition duration-150 shadow-sm disabled:bg-gray-100" disabled>
+                    <button type="submit" id="send-button" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-3 rounded-xl transition duration-150 shadow-md disabled:bg-blue-300" disabled>
+                        Gönder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Socket.IO istemci kütüphanesini dahil et -->
     <script src="/socket.io/socket.io.js"></script> 
     
     <script>
         // CLIENT-SIDE JAVASCRIPT
-        const socket = io(); // Sunucuya bağlanır!
+        let socket; // Socket baglantisi burada tutulacak
+        let username = '';
+        let typingTimeout;
+        const TYPING_TIMER_LENGTH = 1000; // 1 saniye sonra yazmayi birakti say
 
+        // DOM Elementleri
+        const usernameModal = document.getElementById('username-modal');
+        const usernameInput = document.getElementById('username-input');
+        const setUsernameBtn = document.getElementById('set-username-btn');
+        const usernameError = document.getElementById('username-error');
+        const mainChatContainer = document.getElementById('main-chat-container');
+        const messagesContainer = document.getElementById('messages-container');
+        const userList = document.getElementById('user-list');
+        const onlineCount = document.getElementById('online-count');
+        const typingIndicator = document.getElementById('typing-indicator');
         const form = document.getElementById('form');
         const input = document.getElementById('input');
-        const messages = document.getElementById('messages');
+        const sendButton = document.getElementById('send-button');
 
-        // 1. Mesajı Gönderme İşlemi
+        // Sayfa yuklendiginde kullanici adi girisini goster
+        window.onload = function() {
+            usernameModal.classList.remove('hidden');
+        };
+
+        // Otomatik kaydirma fonksiyonu
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // MESAJI EKRANA YAZDIRMA FONKSIYONU
+        function addMessage(data) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex';
+
+            if (data.isSystem) {
+                // Sistem mesaji stili
+                messageDiv.innerHTML = `<p class="text-sm text-center text-gray-500 italic w-full">${data.text}</p>`;
+                messagesContainer.appendChild(messageDiv);
+            } else {
+                // Normal kullanici mesaji stili
+                const isMyMessage = data.user === username;
+
+                // Balon stili ve hizalamasi
+                const alignment = isMyMessage ? 'justify-end' : 'justify-start';
+                const color = isMyMessage ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200';
+                
+                messageDiv.className = `flex ${alignment}`;
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl shadow-md ${color}">
+                        <p class="text-xs font-semibold ${isMyMessage ? 'text-blue-200' : 'text-blue-500'} mb-1">${data.user}</p>
+                        <p class="text-sm">${data.text}</p>
+                        <p class="text-xs mt-1 text-right ${isMyMessage ? 'text-blue-300' : 'text-gray-400'}">${data.timestamp}</p>
+                    </div>
+                `;
+                messagesContainer.appendChild(messageDiv);
+            }
+
+            scrollToBottom();
+        }
+
+        // KULLANICI LISTESINI GUNCELLEME FONKSIYONU
+        function updateDisplayUsers(usersArray) {
+            userList.innerHTML = ''; // Listeyi temizle
+            onlineCount.textContent = `${usersArray.length} kişi online`;
+
+            usersArray.forEach(user => {
+                const li = document.createElement('li');
+                
+                // Benim kullanici adimsa daha belirgin yap
+                const style = user === username ? 'font-bold text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-100';
+                
+                li.className = `p-2 rounded-lg cursor-pointer flex items-center space-x-2 transition duration-150 ${style}`;
+                li.innerHTML = `
+                    <span class="w-3 h-3 rounded-full ${user === username ? 'bg-green-500' : 'bg-gray-400'} shadow-lg"></span>
+                    <span>${user} ${user === username ? '(Sen)' : ''}</span>
+                `;
+                userList.appendChild(li);
+            });
+        }
+        
+        // YAZIYOR BILDIRIMINI GUNCELLEME
+        let typingUsers = [];
+        function updateTypingIndicator() {
+            if (typingUsers.length > 0) {
+                const names = typingUsers.join(', ');
+                typingIndicator.textContent = `${names} yazıyor...`;
+                typingIndicator.classList.remove('opacity-0');
+            } else {
+                typingIndicator.classList.add('opacity-0');
+                typingIndicator.textContent = '';
+            }
+        }
+
+        // =======================================================
+        // KULLANICI ADI GİRİŞİ VE İLK BAĞLANTI MANTIĞI
+        // =======================================================
+
+        setUsernameBtn.addEventListener('click', () => {
+            const enteredUsername = usernameInput.value.trim();
+            if (enteredUsername.length >= 2) {
+                username = enteredUsername;
+                socket = io(); // Socket baglantisini baslat
+
+                // Sunucuya kullanici adini gonder
+                socket.emit('set user', username); 
+                
+                // Socket olaylarini dinlemeye basla
+                setupSocketListeners(); 
+
+                // Arayuzu aktif et
+                input.disabled = false;
+                sendButton.disabled = false;
+            } else {
+                usernameError.textContent = 'Kullanıcı adı en az 2 karakter olmalıdır.';
+                usernameError.classList.remove('hidden');
+            }
+        });
+
+        // =======================================================
+        // MESAJ GÖNDERME VE YAZIYOR... MANTIĞI
+        // =======================================================
+        
+        // 1. Yaziyor... bildirimi gonderme
+        input.addEventListener('input', () => {
+            if (socket && username) {
+                // Kullanici yazmaya basladigini bildir
+                socket.emit('typing');
+                
+                // Eskiyi temizle, yeniyi kur
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    // 1 saniye boyunca yazmazsa durdur
+                    socket.emit('stop typing');
+                }, TYPING_TIMER_LENGTH);
+            }
+        });
+
+        // 2. Mesaj gonderme
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            if (input.value) {
-                // Sunucuya 'chat message' olayıyla mesajı gönder
-                socket.emit('chat message', input.value);
+            if (input.value && socket && username) {
+                // Mesaji sunucuya gonder
+                socket.emit('chat message', input.value); 
+                
+                // Yazma durumunu temizle
+                socket.emit('stop typing'); 
+                clearTimeout(typingTimeout);
+                
                 input.value = ''; // Girişi temizle
             }
         });
 
-        // 2. Mesajı Alma İşlemi
-        socket.on('chat message', function(msg) {
-            // Sunucudan gelen mesajı listeye ekle
-            const item = document.createElement('li');
-            item.textContent = msg;
-            messages.appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight); // En alta kaydır
-        });
+
+        // =======================================================
+        // SOCKET.IO OLAYLARI
+        // =======================================================
+
+        function setupSocketListeners() {
+            // Sunucudan gelen onay (Kullanici adi kabul edildi)
+            socket.on('update users', (usersArray) => {
+                // Kullanici adi kabul edildiyse modal'i kapat
+                if (usernameModal.classList.contains('fixed')) {
+                    usernameModal.classList.add('hidden');
+                    mainChatContainer.classList.remove('hidden');
+                }
+                updateDisplayUsers(usersArray);
+            });
+
+            // Sunucudan gelen hata (Kullanici adi reddedildi)
+            socket.on('username error', (message) => {
+                usernameError.textContent = message;
+                usernameError.classList.remove('hidden');
+                socket.disconnect(); // Baglantiyi kes
+                input.disabled = true; // Formu devre disi birak
+                sendButton.disabled = true;
+            });
+            
+            // Yeni mesaj aldiginda
+            socket.on('chat message', (data) => {
+                addMessage(data);
+            });
+
+            // Baskasi yaziyor...
+            socket.on('typing', (user) => {
+                if (!typingUsers.includes(user)) {
+                    typingUsers.push(user);
+                    updateTypingIndicator();
+                }
+            });
+
+            // Baskasi yazmayi birakti
+            socket.on('stop typing', (user) => {
+                const index = typingUsers.indexOf(user);
+                if (index > -1) {
+                    typingUsers.splice(index, 1);
+                    updateTypingIndicator();
+                }
+            });
+
+            // Baglanti kesildiginde
+            socket.on('disconnect', () => {
+                addMessage({
+                    user: 'Sunucu',
+                    text: 'Bağlantı kesildi. Tekrar bağlanmayı deneyin.',
+                    isSystem: true
+                });
+            });
+        }
     </script>
 </body>
 </html>
