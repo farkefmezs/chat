@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ergün & Kanka Real-Time Sohbet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Basit ve mobil uyumlu stil -->
+    <style>
+        body { 
+            margin: 0; 
+            padding-bottom: 5rem; /* Form için yer ayır */
+            font-family: Arial, sans-serif; 
+            background-color: #f0f4f8; 
+            color: #333; 
+        }
+        #form { 
+            background: #ffffff; 
+            padding: 0.5rem; 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            display: flex; 
+            box-shadow: 0 -3px 8px rgba(0,0,0,0.15); /* Gölgelendirme */
+        }
+        #input { 
+            border: 2px solid #ccc; 
+            padding: 0.75rem; 
+            flex-grow: 1; 
+            border-radius: 25px; 
+            margin-right: 0.5rem; 
+            transition: border-color 0.3s;
+        }
+        #input:focus { 
+            outline: none; 
+            border-color: #007bff; /* Mavi odak rengi */
+        }
+        #form > button { 
+            background: #007bff; 
+            border: none; 
+            padding: 0.75rem 1.5rem; 
+            border-radius: 25px; 
+            color: white; 
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        #form > button:hover { 
+            background-color: #0056b3; 
+        }
+        #form > button:active {
+            transform: scale(0.98);
+        }
+        #messages { 
+            list-style-type: none; 
+            margin: 0; 
+            padding: 10px; 
+            display: flex;
+            flex-direction: column;
+        }
+        #messages > li { 
+            padding: 10px 15px; 
+            margin-bottom: 8px; 
+            border-radius: 18px; 
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.4;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        /* Gelen Mesaj Stili */
+        #messages > li:nth-child(odd) { 
+            background: #e9ecef; /* Açık gri */
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        /* Gönderilen Mesaj Stili */
+        #messages > li:nth-child(even) { 
+            background: #d1e7dd; /* Açık yeşil/mavi */
+            align-self: flex-end;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <ul id="messages"></ul>
+    <form id="form">
+        <input id="input" autocomplete="off" placeholder="Mesajınızı buraya yazın..." />
+        <button type="submit">Gönder</button>
+    </form>
+
+    <!-- Socket.IO istemci kütüphanesini dahil et -->
+    <script src="/socket.io/socket.io.js"></script> 
+    
+    <script>
+        // CLIENT-SIDE JAVASCRIPT
+        const socket = io(); // Sunucuya bağlanır!
+
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+
+        // 1. Mesajı Gönderme İşlemi
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (input.value) {
+                // Sunucuya 'chat message' olayıyla mesajı gönder
+                socket.emit('chat message', input.value);
+                input.value = ''; // Girişi temizle
+            }
+        });
+
+        // 2. Mesajı Alma İşlemi
+        socket.on('chat message', function(msg) {
+            // Sunucudan gelen mesajı listeye ekle
+            const item = document.createElement('li');
+            item.textContent = msg;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight); // En alta kaydır
+        });
+    </script>
+</body>
+</html>
